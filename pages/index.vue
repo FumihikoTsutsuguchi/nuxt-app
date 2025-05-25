@@ -133,7 +133,7 @@ export default {
                 }
                 this.json_data = arr;
               } else {
-                this.json_data = {};
+                this.json_data = [];
               }
             });
         })
@@ -144,7 +144,7 @@ export default {
     logout() {
       firebase.auth().signOut();
       this.user_name = "";
-      this.json_data = {};
+      this.json_data = [];
       this.logined = false;
       this.message = "ログアウトしました。";
     },
@@ -232,6 +232,7 @@ export default {
   font-size: 16px;
 }
 .list2 {
+  font-size: 10px;
   margin-left: auto;
   padding-right: 30px;
 }
@@ -268,6 +269,7 @@ ul {
 li {
   position: relative;
   display: flex;
+  align-items: center;
   padding: 10px;
   font-size: 14px;
 }
