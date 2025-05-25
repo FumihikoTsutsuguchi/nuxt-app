@@ -1,15 +1,14 @@
 <template>
   <section class="container">
-    <div class="login" @click="doLogin">
+    <div v-if="!logined" class="login" @click="doLogin">
       <button @click="doLogin">ログイン</button>
-      [login:{{ user_name }}]
     </div>
-    <div>
+    <div v-if="logined">
       <button @click="logout">ログアウト</button>
+      [ユーザー名: {{ user_name }}]
     </div>
     <h1>{{ title }}</h1>
     <p class="message">{{ message }}</p>
-    <div v-if="logined"></div>
     <table>
       <tr>
         <th>Message</th>
@@ -17,10 +16,16 @@
         <td><button @click="add">投稿</button></td>
       </tr>
     </table>
-    <ul v-for="(data, key) in json_data">
-      <li>
-        <div class="list1">{{ data.msg }}</div>
-        <div class="list2">{{ data.user }}{{ data.posted }}</div>
+    <ul>
+      <li v-for="(data, i) in json_data" :key="data.id">
+        <div class="list1">
+          <span class="list1-no">{{ `NO${i + 1}:` }}</span>
+          <span>{{ data.msg }}</span>
+        </div>
+        <div class="list2">{{ data.user }} {{ data.posted }}</div>
+        <div class="list3">
+          <button @click="deleteItem(data.id)">×</button>
+        </div>
       </li>
     </ul>
   </section>
@@ -48,14 +53,14 @@ if(!firebase.apps.length)firebase.initializeApp(firebaseConfig)
 export default {
   data() {
     return {
-      title:'Board',
-      message:'ミニ伝言板、最新の投稿を表示します。',
+      title:'掲示板アプリ',
+      message:'ログイン後、最新の投稿を表示します。',
       user_name:'',
-      logined:true,
+      logined: false,
       msg:'',
       user: null,
-      page:0,
-      num_per_page:10,
+      page: 0,
+      num_per_page: 10,
       json_data:{}
     };
   },
@@ -67,16 +72,17 @@ export default {
         this.user = result.user;
         this.user_name = result.user.displayName;
         this.message = 'ログインしました。';
+        this.logined = true;
         let db = firebase.database();
         let ref = db.ref('board');
         ref.orderByKey().limitToLast(this.num_per_page).on('value', (snapshot => {
           if (firebase.auth().currentUser != null) {
-            let arr =[];
-            let data = snapshot.val();
-            for(let item in data) {
-              arr.unshift(data[item]);
-            }
-            console.log(arr);
+            const raw = snapshot.val() || {}
+            const arr = []
+            for (const id in raw) {
+               const obj = raw[id]
+               arr.unshift({ id, ...obj })  // 時系列逆転
+             }
             this.json_data =  arr;
           }else {
             this.json_data = {};
@@ -88,6 +94,7 @@ export default {
       firebase.auth().signOut();
       this.user_name = '';
       this.json_data =  {};
+      this.logined = false;
       this.message = 'ログアウトしました。';
     },
     doLogin() {
@@ -102,12 +109,9 @@ export default {
         alert('ログインしないと投稿できません。');
         return;
       }
-      let db = firebase.database();
       let user = firebase.auth().currentUser;
-      console.log(user);
-      let ref = db.ref('board');
       let d = new Date();
-      let dstr = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + ' ' + d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds();
+      let dstr = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + ' ' + d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') + ':' + d.getSeconds().toString().padStart(2, '0');
       let id = d.getTime();
       let data = {
         msg:this.msg,
@@ -118,13 +122,22 @@ export default {
       this.msg = '';
       this.message = '投稿しました。';
     },
-  },
-  created() {
-    if (firebase.auth().currentUser == null) {
-      this.login();
+    deleteItem(id) {
+      if (!firebase.auth().currentUser) {
+        alert('ログインしないと削除できません。')
+        return
+      }
+      try {
+        firebase.database().ref(`board/${id}`).remove()
+        // 2) 画面側の配列からも除外
+        this.json_data = this.json_data.filter(item => item.id !== id)
+        this.message = '投稿を削除しました。'
+      } catch (err) {
+        console.error(err)
+        this.message = '削除に失敗しました：' + err.message
+      }
     }
-    console.log(firebase.auth().currentUser);
-  }
+  },
 }
 
 </script>
@@ -140,14 +153,22 @@ export default {
   font-size: 16px;
 }
 .list2 {
+  margin-left: auto;
+  padding-right: 30px;
+}
+.list3 {
+  position: absolute;
+  right: 5px;
   text-align: right;
   font-size: 10px;
 }
 .container {
   padding: 5px 10px;
+  max-width: 980px;
+  margin: 0 auto;
 }
 h1 {
-  font-size: 60px;
+  font-size: 40px;
   color: #345980;
 }
 p {
@@ -162,9 +183,12 @@ div {
   font-size: 14px;
 }
 ul {
-  margin: 0 10px;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 li {
+  position: relative;
+  display: flex;
   padding: 10px;
   font-size: 14px;
 }
@@ -184,5 +208,8 @@ input {
 }
 button {
   font-size: 14px;
+}
+.list1-no {
+  font-size: 12px;
 }
 </style>
