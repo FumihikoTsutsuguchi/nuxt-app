@@ -49,18 +49,28 @@
         <td><button @click="add">投稿</button></td>
       </tr>
     </table>
-    <ul>
-      <li v-for="(data, i) in json_data" :key="data.id">
-        <div class="list1">
-          <span class="list1-no">{{ `NO${i + 1}:` }}</span>
-          <span>{{ data.msg }}</span>
-        </div>
-        <div class="list2">{{ data.user }} {{ data.posted }}</div>
-        <div class="list3">
-          <button @click="deleteItem(data.id)">×</button>
-        </div>
-      </li>
-    </ul>
+    <div class="board">
+      <ul>
+        <li v-for="(data, i) in pagedData" :key="data.id">
+          <div class="list1">
+            <span class="list1-no">{{ `NO${currentPage * num_per_page + i + 1}:` }}</span>
+
+            <span>{{ data.msg }}</span>
+          </div>
+          <div class="list2">{{ data.user }} {{ data.posted }}</div>
+          <div class="list3">
+            <button @click="deleteItem(data.id)">×</button>
+          </div>
+        </li>
+      </ul>
+      <nav v-if="totalPages > 1" class="pager">
+        <button @click="prevPage" :disabled="currentPage === 0">Prev</button>
+        <span>{{ currentPage + 1 }} / {{ totalPages }}</span>
+        <button @click="nextPage" :disabled="currentPage >= totalPages - 1">
+          Next
+        </button>
+      </nav>
+    </div>
   </section>
 </template>
 
@@ -92,9 +102,9 @@ export default {
       logined: false,
       msg: "",
       user: null,
-      page: 0,
+      currentPage: 0,
       num_per_page: 10,
-      json_data: {},
+      json_data: [],
     };
   },
   methods: {
@@ -113,7 +123,6 @@ export default {
           let ref = db.ref("board");
           ref
             .orderByKey()
-            .limitToLast(this.num_per_page)
             .on("value", (snapshot) => {
               if (firebase.auth().currentUser != null) {
                 const raw = snapshot.val() || {};
@@ -193,6 +202,21 @@ export default {
         this.message = "削除に失敗しました：" + err.message;
       }
     },
+    nextPage() {
+      if (this.currentPage < this.totalPages - 1) this.currentPage++;
+    },
+    prevPage() {
+      if (this.currentPage > 0) this.currentPage--;
+    },
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.json_data.length / this.num_per_page);
+    },
+    pagedData() {
+      const start = this.currentPage * this.num_per_page;
+      return this.json_data.slice(start, start + this.num_per_page);
+    },
   },
 };
 </script>
@@ -266,6 +290,15 @@ button {
 }
 .list1-no {
   font-size: 12px;
+}
+.board {
+  position: relative;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+.pager {
+  margin-top: auto;
 }
 
 .gsi-material-button {
