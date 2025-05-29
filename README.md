@@ -1,6 +1,8 @@
 # nuxt-app
 
 ## Build Setup
+<img width="903" alt="スクリーンショット 2025-05-29 22 15 18" src="https://github.com/user-attachments/assets/ac042008-82db-4423-b9f5-d230ca40c904" />
+<img width="898" alt="スクリーンショット 2025-05-29 22 16 52" src="https://github.com/user-attachments/assets/b50615ad-84a5-4d01-bd80-e4209bc162eb" />
 
 ```bash
 # install dependencies
